@@ -56,6 +56,11 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if request.url.path.startswith("/admin"):
+        # Admin pages must never be served from the browser cache: a
+        # refresh after sign-out (or during a lockout) must re-check the
+        # session instead of showing a stale dashboard.
+        response.headers["Cache-Control"] = "no-store"
     return response
 
 
@@ -272,7 +277,18 @@ def create_lead(request: Request, lead: LeadIn):
 # ---------------------------------------------------------------------------
 
 def _is_admin(request: Request) -> bool:
+    # A locked-out address cannot use an existing session either: the
+    # lockout covers the whole admin panel, not just the login form.
+    # Otherwise a browser that signed in earlier would sail straight
+    # past a lockout on refresh.
+    if ratelimit.login_locked(_client_ip(request)) > 0:
+        return False
     return auth.verify_session_token(request.cookies.get(auth.SESSION_COOKIE))
+
+
+def _lockout_message(remaining: float) -> str:
+    minutes = max(1, int(-(-remaining // 60)))  # ceil to whole minutes
+    return f"Too many failed sign-in attempts. Try again in about {minutes} minute(s)."
 
 
 def _admin_required(request: Request):
@@ -290,6 +306,9 @@ def _render_admin_login(error: str = "") -> HTMLResponse:
 @app.get("/admin", response_class=HTMLResponse)
 def admin_home(request: Request):
     if not _is_admin(request):
+        remaining = ratelimit.login_locked(_client_ip(request))
+        if remaining > 0:
+            return _render_admin_login(_lockout_message(remaining))
         return _render_admin_login()
     page = _read_template("admin.html")
     page = page.replace("{{WA_LINK}}", html.escape(db.get_business()["whatsapp_link"]))
@@ -301,10 +320,7 @@ def admin_login(request: Request, username: str = Form(...), password: str = For
     ip = _client_ip(request)
     remaining = ratelimit.login_locked(ip)
     if remaining > 0:
-        minutes = max(1, int(-(-remaining // 60)))  # ceil to whole minutes
-        return _render_admin_login(
-            f"Too many failed sign-in attempts. Try again in about {minutes} minute(s)."
-        )
+        return _render_admin_login(_lockout_message(remaining))
     if not auth.password_configured():
         return _render_admin_login(
             "Admin login is not configured on this server: the ADMIN_PASSWORD "
