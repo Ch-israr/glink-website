@@ -15,7 +15,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import auth, db
+from . import auth, db, ratelimit
 
 BASE = Path(__file__).resolve().parent.parent
 TEMPLATES = BASE / "templates"
@@ -42,6 +42,27 @@ SIZE_IMAGES = {
 
 app = FastAPI(title="Glink Storage Website", docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    """Framing / MIME-sniffing headers on every response.
+
+    X-Frame-Options DENY keeps the admin panel (and the site) from being
+    framed by another page. No CSP: the public pages use inline scripts
+    and a wrong CSP would break them.
+    """
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
+
+def _client_ip(request: Request) -> str:
+    # With uvicorn --proxy-headers (see Dockerfile) this is the real
+    # visitor IP behind Render's proxy; without it, the proxy's IP.
+    return request.client.host if request.client else "unknown"
 
 
 @app.on_event("startup")
@@ -232,7 +253,12 @@ class LeadIn(BaseModel):
 
 
 @app.post("/api/leads")
-def create_lead(lead: LeadIn):
+def create_lead(request: Request, lead: LeadIn):
+    if not ratelimit.lead_allowed(_client_ip(request)):
+        return JSONResponse(
+            {"ok": False, "error": "Too many enquiries from this address. Please try again later."},
+            status_code=429,
+        )
     if lead.referral_source and lead.referral_source not in REFERRAL_SOURCES:
         return JSONResponse(
             {"ok": False, "error": "Unknown referral source."}, status_code=400
@@ -271,14 +297,23 @@ def admin_home(request: Request):
 
 
 @app.post("/admin/login", response_class=HTMLResponse)
-def admin_login(username: str = Form(...), password: str = Form(...)):
+def admin_login(request: Request, username: str = Form(...), password: str = Form(...)):
+    ip = _client_ip(request)
+    remaining = ratelimit.login_locked(ip)
+    if remaining > 0:
+        minutes = max(1, int(-(-remaining // 60)))  # ceil to whole minutes
+        return _render_admin_login(
+            f"Too many failed sign-in attempts. Try again in about {minutes} minute(s)."
+        )
     if not auth.password_configured():
         return _render_admin_login(
             "Admin login is not configured on this server: the ADMIN_PASSWORD "
             "environment variable is not set. Set it and restart the service."
         )
     if not auth.check_login(username, password):
+        ratelimit.record_login_failure(ip)
         return _render_admin_login("Invalid username or password.")
+    ratelimit.reset_login_failures(ip)
     token = auth.create_session_token()
     response = RedirectResponse("/admin", status_code=303)
     response.set_cookie(
@@ -287,6 +322,7 @@ def admin_login(username: str = Form(...), password: str = Form(...)):
         max_age=auth.SESSION_MAX_AGE,
         httponly=True,
         samesite="lax",
+        secure=True,  # site is HTTPS-only on Render; Secure keeps the cookie off plain HTTP
         path="/admin",
     )
     return response
@@ -295,7 +331,7 @@ def admin_login(username: str = Form(...), password: str = Form(...)):
 @app.post("/admin/logout")
 def admin_logout():
     response = RedirectResponse("/admin", status_code=303)
-    response.delete_cookie(auth.SESSION_COOKIE, path="/admin")
+    response.delete_cookie(auth.SESSION_COOKIE, path="/admin", secure=True)
     return response
 
 
