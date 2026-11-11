@@ -5,61 +5,91 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Admin | Glink</title>
 <link rel="stylesheet" href="/static/css/style.css">
+<link rel="stylesheet" href="/static/css/admin.css">
 </head>
-<body>
-<div class="admin-wrap">
-  <div class="inline-row" style="justify-content:space-between">
-    <h1 style="margin:0">Glink Admin</h1>
-    <form method="post" action="/admin/logout" style="margin:0">
-      <button class="btn btn-secondary" type="submit">Sign out</button>
+<body class="admin-body">
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <div class="admin-brand">
+      <span class="logo-mark">G</span>
+      <span class="logo-text"><strong>Glink</strong><span>Storage &amp; Movers</span></span>
+    </div>
+
+    <p class="admin-nav-label">Manage</p>
+    <nav class="admin-nav">
+      <button class="tab-btn active" data-tab="sizes" type="button">Sizes &amp; Prices</button>
+      <button class="tab-btn" data-tab="faq" type="button">FAQ</button>
+      <button class="tab-btn" data-tab="business" type="button">Business Info</button>
+      <button class="tab-btn" data-tab="leads" type="button">Enquiries <span class="count-badge" id="leads-count">0</span></button>
+    </nav>
+
+    <div class="spacer"></div>
+
+    <div class="admin-side-links">
+      <a href="/">View the website</a>
+      <a href="{{WA_LINK}}">WhatsApp</a>
+    </div>
+    <form method="post" action="/admin/logout" class="admin-signout">
+      <button class="btn" type="submit">Sign out</button>
     </form>
-  </div>
-  <p class="form-note">Changes here update the live website immediately. <a href="/">View the website</a> &middot; <a href="{{WA_LINK}}">WhatsApp</a></p>
-  <div id="admin-msg"></div>
+  </aside>
 
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="sizes">Sizes &amp; Prices</button>
-    <button class="tab-btn" data-tab="faq">FAQ</button>
-    <button class="tab-btn" data-tab="business">Business Info</button>
-    <button class="tab-btn" data-tab="leads">Enquiries</button>
-  </div>
-
-  <section class="tab-panel active" id="tab-sizes">
-    <div class="admin-card">
-      <h2>Sizes &amp; Prices</h2>
-      <p class="form-note">Prices are monthly &ldquo;from&rdquo; prices in AED, including VAT. The site shows them in the order listed here.</p>
-      <div id="sizes-editor"></div>
-      <button class="btn btn-primary" id="add-size" type="button">Add size</button>
-      <button class="btn btn-secondary" id="save-sizes" type="button">Save sizes</button>
+  <main class="admin-main">
+    <div class="admin-topbar">
+      <h1>Dashboard</h1>
+      <p>Changes here update the live website immediately.</p>
     </div>
-  </section>
+    <div id="admin-msg"></div>
 
-  <section class="tab-panel" id="tab-faq">
-    <div class="admin-card">
-      <h2>FAQ</h2>
-      <p class="form-note">Questions and answers shown on the home, personal and business pages.</p>
-      <div id="faq-editor"></div>
-      <button class="btn btn-primary" id="add-faq" type="button">Add question</button>
-      <button class="btn btn-secondary" id="save-faq" type="button">Save FAQ</button>
+    <div class="admin-stats">
+      <div class="stat-card"><span class="stat-accent"></span><span class="stat-num" id="stat-sizes">–</span><span class="stat-label">Storage sizes live</span></div>
+      <div class="stat-card"><span class="stat-accent"></span><span class="stat-num" id="stat-faq">–</span><span class="stat-label">FAQ questions</span></div>
+      <div class="stat-card"><span class="stat-accent"></span><span class="stat-num" id="stat-leads">–</span><span class="stat-label">Enquiries received</span></div>
     </div>
-  </section>
 
-  <section class="tab-panel" id="tab-business">
-    <div class="admin-card">
-      <h2>Business Info</h2>
-      <p class="form-note">WhatsApp number and link, address, and the per-sqft rate shown across the site.</p>
-      <div id="business-editor"></div>
-      <button class="btn btn-secondary" id="save-business" type="button">Save business info</button>
-    </div>
-  </section>
+    <section class="tab-panel active" id="tab-sizes">
+      <div class="admin-panel-card">
+        <h2>Sizes &amp; Prices</h2>
+        <p class="form-note">Prices are monthly &ldquo;from&rdquo; prices in AED, including VAT. The site shows them in the order listed here.</p>
+        <div id="sizes-editor"></div>
+        <div class="admin-actions">
+          <button class="btn btn-primary" id="add-size" type="button">+ Add size</button>
+          <button class="btn btn-secondary" id="save-sizes" type="button">Save sizes</button>
+        </div>
+      </div>
+    </section>
 
-  <section class="tab-panel" id="tab-leads">
-    <div class="admin-card">
-      <h2>Enquiries</h2>
-      <p class="form-note">Quote and contact form submissions, newest first. These are also sent to WhatsApp by the visitor.</p>
-      <div id="leads-list"><p class="form-note">Loading…</p></div>
-    </div>
-  </section>
+    <section class="tab-panel" id="tab-faq">
+      <div class="admin-panel-card">
+        <h2>FAQ</h2>
+        <p class="form-note">Questions and answers shown on the home, personal and business pages.</p>
+        <div id="faq-editor"></div>
+        <div class="admin-actions">
+          <button class="btn btn-primary" id="add-faq" type="button">+ Add question</button>
+          <button class="btn btn-secondary" id="save-faq" type="button">Save FAQ</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-business">
+      <div class="admin-panel-card">
+        <h2>Business Info</h2>
+        <p class="form-note">WhatsApp number and link, address, and the per-sqft rate shown across the site.</p>
+        <div id="business-editor" class="business-grid"></div>
+        <div class="admin-actions">
+          <button class="btn btn-secondary" id="save-business" type="button">Save business info</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-leads">
+      <div class="admin-panel-card">
+        <h2>Enquiries</h2>
+        <p class="form-note">Quote and contact form submissions, newest first. These are also sent to WhatsApp by the visitor.</p>
+        <div id="leads-list"><p class="form-note">Loading…</p></div>
+      </div>
+    </section>
+  </main>
 </div>
 <script src="/static/js/admin.js"></script>
 </body>

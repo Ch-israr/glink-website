@@ -13,48 +13,65 @@
 
   var state = { sizes: [], faq: [], business: {} };
 
+  function setStat(id, value) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+
   function renderSizes() {
     document.getElementById("sizes-editor").innerHTML = state.sizes.map(function (s, i) {
-      return '<div class="inline-row" style="margin-bottom:0.5rem">' +
-        '<input type="number" min="1" value="' + s.sqft + '" data-i="' + i + '" data-f="sqft" aria-label="Size in sqft" style="max-width:110px"> sq ft' +
-        '<input type="number" min="0" step="0.01" value="' + s.price_monthly + '" data-i="' + i + '" data-f="price_monthly" aria-label="Monthly price AED" style="max-width:150px"> AED/month' +
-        '<input type="text" value="' + esc(s.label || "") + '" data-i="' + i + '" data-f="label" placeholder="Label, e.g. Studio" aria-label="Label">' +
+      return '<div class="size-row">' +
+        '<div class="mini-field"><label>Size (sq ft)</label>' +
+        '<input type="number" min="1" value="' + s.sqft + '" data-i="' + i + '" data-f="sqft" aria-label="Size in sqft"></div>' +
+        '<div class="mini-field"><label>Price (AED / month)</label>' +
+        '<input type="number" min="0" step="0.01" value="' + s.price_monthly + '" data-i="' + i + '" data-f="price_monthly" aria-label="Monthly price AED"></div>' +
+        '<div class="mini-field"><label>Label</label>' +
+        '<input type="text" value="' + esc(s.label || "") + '" data-i="' + i + '" data-f="label" placeholder="e.g. Studio" aria-label="Label"></div>' +
         '<button class="btn btn-danger btn-small" type="button" data-remove-size="' + i + '">Remove</button></div>';
     }).join("");
+    setStat("stat-sizes", state.sizes.length);
   }
   function renderFaq() {
     document.getElementById("faq-editor").innerHTML = state.faq.map(function (f, i) {
-      return '<div class="admin-card" style="padding:1rem;margin-bottom:0.75rem">' +
+      return '<div class="faq-edit-card">' +
+        '<div class="faq-edit-head"><strong>Question ' + (i + 1) + '</strong>' +
+        '<button class="btn btn-danger btn-small" type="button" data-remove-faq="' + i + '">Remove</button></div>' +
         '<div class="form-field"><label>Question</label><input type="text" value="' + esc(f.question) + '" data-i="' + i + '" data-f="question"></div>' +
         '<div class="form-field"><label>Answer</label><textarea data-i="' + i + '" data-f="answer">' + esc(f.answer) + "</textarea></div>" +
-        '<button class="btn btn-danger btn-small" type="button" data-remove-faq="' + i + '">Remove</button></div>';
+        "</div>";
     }).join("");
+    setStat("stat-faq", state.faq.length);
   }
   function renderBusiness() {
     var b = state.business;
     var fields = [
-      ["business_name", "Business name"],
-      ["whatsapp_number", "WhatsApp number (shown on the site)"],
-      ["whatsapp_link", "WhatsApp link (wa.me/...)"],
-      ["address", "Address"],
-      ["price_per_sqft", "Price per sqft (AED)"],
-      ["storage_location", "Storage location (shown on the site)"]
+      ["business_name", "Business name", ""],
+      ["whatsapp_number", "WhatsApp number (shown on the site)", ""],
+      ["whatsapp_link", "WhatsApp link (wa.me/...)", "wide"],
+      ["address", "Address", "wide"],
+      ["price_per_sqft", "Price per sqft (AED)", ""],
+      ["storage_location", "Storage location (shown on the site)", ""]
     ];
     document.getElementById("business-editor").innerHTML = fields.map(function (f) {
-      return '<div class="form-field"><label>' + f[1] + '</label><input type="text" data-bkey="' + f[0] + '" value="' + esc(b[f[0]] || "") + '"></div>';
+      return '<div class="form-field' + (f[2] ? " " + f[2] : "") + '"><label>' + f[1] + '</label><input type="text" data-bkey="' + f[0] + '" value="' + esc(b[f[0]] || "") + '"></div>';
     }).join("");
   }
   function renderLeads(leads) {
     var el = document.getElementById("leads-list");
+    setStat("stat-leads", leads.length);
+    setStat("leads-count", leads.length);
     if (!leads.length) { el.innerHTML = '<p class="form-note">No enquiries yet.</p>'; return; }
     el.innerHTML = leads.map(function (l) {
+      var contact = [esc(l.phone), l.email ? esc(l.email) : "", l.company ? esc(l.company) : ""].filter(Boolean).join(" · ");
+      var details = [(l.size ? "Size: " + esc(l.size) + " sq ft" : ""),
+        (l.referral_source ? "Via: " + esc(l.referral_source) : "")].filter(Boolean).join(" · ");
       return '<div class="lead-row">' +
-        "<p><strong>" + esc(l.first_name) + " " + esc(l.last_name) + "</strong> — " + esc(l.phone) +
-        (l.email ? " · " + esc(l.email) : "") + (l.company ? " · " + esc(l.company) : "") + "</p>" +
-        "<p>" + (l.size ? "Size: " + esc(l.size) + " sq ft · " : "") +
-        (l.referral_source ? "Via: " + esc(l.referral_source) + " · " : "") + "</p>" +
-        (l.message ? "<p>" + esc(l.message) + "</p>" : "") +
-        '<p class="meta">#' + l.id + " · " + esc(l.created_at) + ' UTC · <button class="btn btn-danger btn-small" type="button" data-delete-lead="' + l.id + '">Delete</button></p>' +
+        '<div class="lead-head"><strong>' + esc(l.first_name) + " " + esc(l.last_name) + "</strong>" +
+        '<span class="meta">#' + l.id + " · " + esc(l.created_at) + " UTC</span></div>" +
+        (contact ? '<p class="lead-contact">' + contact + "</p>" : "") +
+        (details ? "<p>" + details + "</p>" : "") +
+        (l.message ? '<p class="lead-msg">' + esc(l.message) + "</p>" : "") +
+        '<div class="lead-foot"><button class="btn btn-danger btn-small" type="button" data-delete-lead="' + l.id + '">Delete</button></div>' +
         "</div>";
     }).join("");
   }
