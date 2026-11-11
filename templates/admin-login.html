@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Login | Glink</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="admin-wrap" style="max-width:480px">
+  <div class="admin-card">
+    <h1>Glink Admin</h1>
+    <p class="form-note">Sign in to manage the website content and view enquiries.</p>
+    {{ERROR}}
+    <form method="post" action="/admin/login">
+      <div class="form-field">
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text" autocomplete="username" required>
+      </div>
+      <div class="form-field">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+    </form>
+    <p class="form-note" style="margin-top:1rem"><a href="/">Back to the website</a></p>
+  </div>
+</div>
+</body>
+</html>

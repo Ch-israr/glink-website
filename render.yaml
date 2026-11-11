@@ -1,0 +1,17 @@
+# Render Blueprint — import this repo in Render to create the Glink website service.
+# Dashboard: Render → New → Blueprint → select this repo.
+# ADMIN_PASSWORD is prompted on import (sync: false) — paste the value from ADMIN_PASSWORD.txt.
+services:
+  - type: web
+    name: glink-website
+    runtime: docker
+    branch: main
+    envVars:
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: DATABASE_PATH
+        value: /app/data/glink.db
+    disk:
+      name: glink-data
+      mountPath: /app/data
+      sizeGB: 1
