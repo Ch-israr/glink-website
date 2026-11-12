@@ -134,7 +134,7 @@ def size_cards_html(sizes: list[dict]) -> str:
         )
         cards.append(
             f"""<article class="size-card" data-sqft="{int(s['sqft'])}">
-              <img src="/static/images/{img}" alt="{int(s['sqft'])} sqft storage unit" loading="lazy">
+              <img src="/static/images/{img}" alt="{int(s['sqft'])} sqft storage unit" loading="lazy" decoding="async">
               <div class="size-card-body">
                 <h3>{int(s['sqft'])} sq ft</h3>
                 <p class="size-label">{html.escape(s.get('label') or '')}</p>

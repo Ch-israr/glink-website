@@ -33,7 +33,7 @@
   function renderSizes(sizes) {
     var cards = sizes.map(function (s) {
       return '<article class="size-card" data-sqft="' + s.sqft + '">' +
-        '<img src="/static/images/' + sizeImage(s.sqft) + '" alt="' + s.sqft + ' sqft storage unit" loading="lazy">' +
+        '<img src="/static/images/' + sizeImage(s.sqft) + '" alt="' + s.sqft + ' sqft storage unit" loading="lazy" decoding="async">' +
         '<div class="size-card-body"><h3>' + s.sqft + ' sq ft</h3>' +
         '<p class="size-label">' + esc(s.label || "") + '</p>' +
         '<p class="size-note">' + sizeNote(s.sqft) + '</p>' +
