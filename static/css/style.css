@@ -208,7 +208,15 @@ tr:last-child td { border-bottom: none; }
 
 /* Size picker (book page) */
 .size-card.selected { border-color: var(--orange); box-shadow: 0 0 0 2px var(--orange); }
-.picker { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.5rem; }
+/* Book-page picker: the same cards, but small and side by side so all five
+   sizes can be compared at a glance instead of one giant card per row. */
+.picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.5rem; }
+.picker .size-card { padding: 0.75rem; }
+.picker .size-card img { height: 90px; }
+.picker .size-card-body { padding-top: 0.75rem; }
+.picker .size-price { font-size: 1.05rem; }
+.picker .size-card-top { flex-wrap: wrap; }
+.picker .size-desc { display: none; }
 .picker-btn {
   border: 2px solid var(--border); background: #fff; border-radius: 10px; padding: 0.75rem 1.1rem;
   font-family: inherit; font-size: 1rem; cursor: pointer; color: var(--navy);
@@ -288,8 +296,12 @@ tr:last-child td { border-bottom: none; }
   h1 { font-size: 2.1rem; }
   .grid-3, .grid-2, .steps, .gallery-grid, .feature-grid, .form-row { grid-template-columns: 1fr; }
   .size-grid { grid-template-columns: 1fr; }
+  .picker { grid-template-columns: 1fr 1fr; }
   .footer-grid { grid-template-columns: 1fr; }
   table { display: block; overflow-x: auto; }
   .topbar-note { display: none; }
   .topbar-inner { justify-content: center; }
+}
+@media (max-width: 420px) {
+  .picker { grid-template-columns: 1fr; }
 }
