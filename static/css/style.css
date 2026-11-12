@@ -74,6 +74,8 @@ img { max-width: 100%; height: auto; display: block; }
   transition: transform 0.2s ease;
 }
 .logo:hover .logo-mark { transform: translateY(-1px); }
+.logo-img { height: 40px; width: auto; display: block; transition: transform 0.2s ease; }
+.logo:hover .logo-img { transform: translateY(-1px); }
 .logo-text { display: flex; flex-direction: column; line-height: 1.1; }
 .logo-text strong { font-size: 1.05rem; font-family: "DM Serif Display", serif; font-weight: 400; white-space: nowrap; }
 .logo-text span { font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
@@ -225,6 +227,7 @@ tr:last-child td { border-bottom: none; }
 .site-footer ul a:hover { padding-left: 4px; }
 .footer-brand { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1rem; }
 .footer-brand .logo-mark { width: 40px; height: 40px; font-size: 1.5rem; }
+.footer-brand .logo-img { height: 40px; width: auto; }
 .footer-brand strong { font-family: "DM Serif Display", serif; font-weight: 400; font-size: 1.25rem; color: #fff; line-height: 1.1; }
 .footer-brand span { display: block; font-size: 0.75rem; color: #9ca3af; }
 .footer-bottom { border-top: 1px solid rgba(255,255,255,0.15); padding: 1.1rem 0; font-size: 0.9rem; }
