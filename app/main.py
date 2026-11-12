@@ -1,4 +1,4 @@
-"""Glink Int'L Storage and movers — website.
+"""Globe Link International — website.
 
 One FastAPI service serves the public site, the JSON content/lead API,
 and the admin panel. Static assets (CSS/JS/images/fonts) live under
@@ -72,7 +72,7 @@ SIZE_IMAGES = {
 }
 
 app = FastAPI(
-    title="Glink Storage Website",
+    title="Globe Link International Website",
     docs_url=None,
     redoc_url=None,
     openapi_url=None,  # /openapi.json would otherwise publish the full API schema
@@ -202,7 +202,7 @@ def _inject_head_extras(page: str, name: str) -> str:
         url = SITE_URL + path
         extras.append(f'<link rel="canonical" href="{url}">')
         extras.append('<meta property="og:type" content="website">')
-        extras.append('<meta property="og:site_name" content="Glink Int\'L Storage and movers">')
+        extras.append('<meta property="og:site_name" content="Globe Link International">')
         if title_m:
             extras.append(
                 '<meta property="og:title" content="'
@@ -229,7 +229,12 @@ def render(name: str) -> HTMLResponse:
     faq = db.get_faq()
     biz = db.get_business()
     page = _read_template(name)
-    page = page.replace("<!--HEADER-->", _read_template("header.html"))
+    header = _read_template("header.html")
+    # Mark the current page's nav link so the header shows where you are.
+    path = PAGE_PATHS.get(name)
+    if path:
+        header = header.replace(f'<a href="{path}">', f'<a href="{path}" class="active">', 1)
+    page = page.replace("<!--HEADER-->", header)
     page = page.replace("<!--FOOTER-->", _read_template("footer.html"))
     tokens = {
         "{{BUSINESS_NAME}}": html.escape(biz["business_name"]),

@@ -1,7 +1,10 @@
 <footer class="site-footer">
   <div class="container footer-grid">
     <div>
-      <h4>Glink Int&rsquo;L Storage and movers</h4>
+      <div class="footer-brand">
+        <span class="logo-mark">G</span>
+        <span><strong>Globe Link International</strong><span>Storage and Movers</span></span>
+      </div>
       <p>Movers all over the UAE. Storage in Sharjah, Al Sajaa.</p>
       <p><a class="btn btn-primary" href="{{WA_LINK}}">Message us on WhatsApp</a></p>
     </div>
@@ -33,7 +36,10 @@
     </div>
   </div>
   <div class="footer-bottom">
-    <div class="container">&copy; <span id="year"></span> {{BUSINESS_NAME}}. All rights reserved.</div>
+    <div class="container footer-bottom-inner">
+      <span>&copy; <span id="year"></span> {{BUSINESS_NAME}}. All rights reserved.</span>
+      <span><a href="/privacy">Privacy Policy</a> &nbsp;·&nbsp; <a href="#">Back to top &uarr;</a></span>
+    </div>
   </div>
 </footer>
 <script>document.getElementById('year').textContent = new Date().getFullYear();</script>

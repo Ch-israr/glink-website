@@ -1,6 +1,6 @@
-# Glink Int'L Storage and movers — Website
+# Globe Link International — Website
 
-A complete, deployable website for Glink Int'L Storage and movers:
+A complete, deployable website for Globe Link International:
 movers all over the UAE, storage only in Sharjah, Al Sajaa.
 
 One FastAPI service serves the public site, the JSON content/lead API,
@@ -14,7 +14,7 @@ Book/Select Size, Contact, Privacy. No blog.
 
 Design follows the competitor-site reverse-engineering (navy `#0C1B33`, orange
 `#E8820C`, off-white `#FAFAF8`, DM Sans + DM Serif Display, self-hosted).
-All copy, prices, photos and contact details are Glink's own. Quote and
+All copy, prices, photos and contact details are Globe Link International's own. Quote and
 contact forms save the enquiry in SQLite and then open WhatsApp with the
 message pre-filled — no email sending.
 
@@ -39,7 +39,7 @@ password, set the `ADMIN_PASSWORD` environment variable.
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
 | `ADMIN_PASSWORD` | Yes, for admin login | — | If unset, admin login is refused with a clear error. No default password exists. |
-| `DATABASE_PATH` | No | `data/glink.db` | SQLite file. Created on first run and seeded with the Glink sizes, FAQ and business info. |
+| `DATABASE_PATH` | No | `data/glink.db` | SQLite file. Created on first run and seeded with the Globe Link International sizes, FAQ and business info. |
 | `PORT` | No | `8000` | Port the server listens on (Render sets this automatically). |
 
 ## Admin panel (`/admin`)
@@ -95,7 +95,7 @@ static/
   css/style.css
   js/site.js   # content refresh, lead form, size picker
   js/admin.js  # admin dashboard
-  images/      # real Glink facility/unit photos (10 files)
+  images/      # real Globe Link International facility/unit photos (10 files)
   fonts/       # DM Sans + DM Serif Display (self-hosted woff2)
 templates/     # server-rendered pages + admin pages
 data/          # SQLite database (created at runtime, gitignored)

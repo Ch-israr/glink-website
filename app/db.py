@@ -1,4 +1,4 @@
-"""SQLite storage for the Glink website.
+"""SQLite storage for the Globe Link International website.
 
 Tables:
   sizes    - storage unit sizes and monthly "from" prices
@@ -20,7 +20,7 @@ DEFAULT_SIZES = [
 
 DEFAULT_FAQ = [
     (
-        "Where is Glink's storage facility?",
+        "Where is Globe Link International's storage facility?",
         "Our storage facility is in Al Sajaa, Sharjah — Plot No. 5108, Warehouse No. 4, "
         "Emirates Industrial City, P.O. Box 64479, Sharjah, UAE. Storage is only offered "
         "in Sharjah, Al Sajaa.",
@@ -54,7 +54,7 @@ DEFAULT_FAQ = [
 ]
 
 DEFAULT_BUSINESS = {
-    "business_name": "Glink Int'L Storage and movers",
+    "business_name": "Globe Link International",
     "whatsapp_number": "+971 52 923 1913",
     "whatsapp_link": "https://wa.me/971529231913",
     "address": "Plot No. 5108, Warehouse No. 4, Emirates Industrial City, P.O. Box 64479, Sharjah, UAE",
