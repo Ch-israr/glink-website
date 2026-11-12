@@ -40,7 +40,12 @@ SIZE_IMAGES = {
     180: "180sqft-corridor-2048.jpg",
 }
 
-app = FastAPI(title="Glink Storage Website", docs_url=None, redoc_url=None)
+app = FastAPI(
+    title="Glink Storage Website",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,  # /openapi.json would otherwise publish the full API schema
+)
 app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
 
 
@@ -345,7 +350,10 @@ def admin_login(request: Request, username: str = Form(...), password: str = For
 
 
 @app.post("/admin/logout")
-def admin_logout():
+def admin_logout(request: Request):
+    # Revoke server-side first: the signed-out token must stop working
+    # at once, not live on until its 12h expiry.
+    auth.revoke_session_token(request.cookies.get(auth.SESSION_COOKIE))
     response = RedirectResponse("/admin", status_code=303)
     response.delete_cookie(auth.SESSION_COOKIE, path="/admin", secure=True)
     return response

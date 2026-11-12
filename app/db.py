@@ -110,6 +110,10 @@ def init_db() -> None:
                 referral_source TEXT NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL DEFAULT (datetime('now'))
             );
+            CREATE TABLE IF NOT EXISTS sessions (
+                sid TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            );
             """
         )
         # Seed sizes once.
@@ -251,6 +255,61 @@ def update_business(values: dict) -> None:
                     "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
                     (key, str(value)),
                 )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Admin sessions — server-side registry so sign-out actually revokes.
+#
+# The cookie token is still a signed, timestamped itsdangerous token, but
+# it now carries a random session id (sid) that must exist in this table.
+# Sign-out deletes the row, so a copied/old token stops working at once.
+# Rows older than the 12h session lifetime are pruned on each sign-in.
+# Stored in SQLite (not process memory) so sessions survive the free
+# plan's idle sleep; like everything else on the free plan they reset
+# on redeploy, when there is no persistent disk.
+# ---------------------------------------------------------------------------
+
+SESSION_LIFETIME_HOURS = 12
+
+
+def prune_sessions() -> None:
+    conn = connect()
+    try:
+        conn.execute(
+            "DELETE FROM sessions WHERE created_at < datetime('now', ?)",
+            (f"-{SESSION_LIFETIME_HOURS} hours",),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def add_session(sid: str) -> None:
+    prune_sessions()
+    conn = connect()
+    try:
+        conn.execute("INSERT INTO sessions (sid) VALUES (?)", (sid,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def session_exists(sid: str) -> bool:
+    conn = connect()
+    try:
+        row = conn.execute("SELECT 1 FROM sessions WHERE sid = ?", (sid,)).fetchone()
+        return row is not None
+    finally:
+        conn.close()
+
+
+def delete_session(sid: str) -> None:
+    conn = connect()
+    try:
+        conn.execute("DELETE FROM sessions WHERE sid = ?", (sid,))
         conn.commit()
     finally:
         conn.close()
