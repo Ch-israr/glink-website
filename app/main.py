@@ -80,6 +80,40 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
 
 
+class _HeadMiddleware:
+    """Answer HEAD requests on GET routes.
+
+    FastAPI's add_api_route() overwrites route.methods after the Route
+    constructor auto-adds HEAD, so every GET route here rejects HEAD
+    with 405. Uptime monitors, `curl -I` and some crawlers use HEAD,
+    so rewrite HEAD to GET internally (except /static, which
+    StaticFiles already answers natively) and drop the response body,
+    keeping the GET headers (incl. Content-Length) intact.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope["method"] != "HEAD":
+            await self.app(scope, receive, send)
+            return
+        if scope["path"].startswith("/static/"):
+            await self.app(scope, receive, send)
+            return
+        scope = {**scope, "method": "GET"}
+
+        async def send_no_body(message):
+            if message["type"] == "http.response.body":
+                message = {**message, "body": b""}
+            await send(message)
+
+        await self.app(scope, receive, send_no_body)
+
+
+app.add_middleware(_HeadMiddleware)
+
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     """Framing / MIME-sniffing headers on every response.
