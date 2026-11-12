@@ -24,22 +24,19 @@
     var map = { 50: "real-50sqft-unit-clean.jpg", 80: "real-80sqft-unit-clean.jpg", 100: "real-100sqft-unit-clean.jpg", 150: "real-150sqft-unit-clean.jpg", 180: "180sqft-corridor-2048.jpg" };
     return map[sqft] || "facility-interior-2048.jpg";
   }
-  function sizeNote(sqft) {
-    return sqft === 180
-      ? "Corridor view — our 180 sqft units are the largest we offer."
-      : "Our real " + sqft + " sqft unit at our Al Sajaa facility.";
-  }
-
   function renderSizes(sizes) {
     var cards = sizes.map(function (s) {
+      var dims = (s.dims && s.cbm) ? s.dims + " · " + s.cbm : "";
       return '<article class="size-card" data-sqft="' + s.sqft + '">' +
         '<img src="/static/images/' + sizeImage(s.sqft) + '" alt="' + s.sqft + ' sqft storage unit" loading="lazy" decoding="async">' +
-        '<div class="size-card-body"><h3>' + s.sqft + ' sq ft</h3>' +
-        '<p class="size-label">' + esc(s.label || "") + '</p>' +
-        '<p class="size-note">' + sizeNote(s.sqft) + '</p>' +
-        '<p class="size-price">from ' + fmtPrice(s.price_monthly) + '<span>/month</span></p>' +
-        '<p class="size-vat">incl. VAT</p>' +
-        '<a class="btn btn-primary" href="/book?size=' + s.sqft + '">Book this size</a></div></article>';
+        '<div class="size-card-body"><div class="size-card-top"><div><h3>' + s.sqft + ' sq ft</h3>' +
+        '<p class="size-dims">' + esc(dims) + '</p></div>' +
+        '<div class="size-price-block"><p class="size-price"><small>from</small> ' + fmtPrice(s.price_monthly) + '</p>' +
+        '<p class="size-per">Per month · incl. VAT</p></div></div>' +
+        '<p class="size-tags"><span class="size-tag">' + esc(s.label || "") + '</span></p>' +
+        '<p class="size-desc">' + esc(s.desc || "") + '</p>' +
+        '<div class="size-actions"><a class="btn btn-primary" href="/book?size=' + s.sqft + '">Book this size</a>' +
+        '<a class="btn btn-outline" href="' + WA_LINK + '">WhatsApp</a></div></div></article>';
     }).join("");
     document.querySelectorAll("[data-sizes]").forEach(function (el) { el.innerHTML = cards; });
     var rows = sizes.map(function (s) {
@@ -161,7 +158,7 @@
       var sqft = parseInt(c.getAttribute("data-sqft"), 10);
       var priceText = (c.querySelector(".size-price") || {}).textContent || "";
       var m = priceText.replace(/[^\d.]/g, "");
-      fallback.push({ sqft: sqft, price_monthly: parseFloat(m) || 0, label: (c.querySelector(".size-label") || {}).textContent || "" });
+      fallback.push({ sqft: sqft, price_monthly: parseFloat(m) || 0, label: (c.querySelector(".size-tag") || {}).textContent || "" });
     });
     if (forms.length) buildForms(fallback);
     fetch("/api/content").then(function (r) { return r.json(); }).then(function (content) {

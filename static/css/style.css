@@ -129,19 +129,30 @@ img { max-width: 100%; height: auto; display: block; }
 .card img { width: 100%; height: 200px; object-fit: cover; }
 .card-body { padding: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
 .card-body .btn { margin-top: auto; }
-.size-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.25rem; }
+.size-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.625rem; }
 .size-card {
-  background: #fff; border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
-  display: flex; flex-direction: column;
+  background: #fff; border: 1px solid #EDEAE8; border-radius: 16px; overflow: hidden;
+  display: flex; flex-direction: column; padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
-.size-card img { width: 100%; height: 150px; object-fit: cover; }
-.size-card-body { padding: 1rem; display: flex; flex-direction: column; gap: 0.25rem; flex: 1; }
-.size-card-body .btn { margin-top: 0.75rem; }
-.size-label { color: var(--muted); font-size: 0.95rem; }
-.size-note { font-size: 0.9rem; color: var(--muted); }
-.size-price { font-family: "DM Serif Display", serif; font-size: 1.4rem; color: var(--navy); margin-top: 0.5rem; }
-.size-price span { font-family: "DM Sans", sans-serif; font-size: 0.85rem; color: var(--muted); }
-.size-vat { font-size: 0.85rem; color: var(--muted); }
+.size-card:hover { border-color: var(--orange); }
+.size-card img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 12px; }
+.size-card-body { padding: 1rem 0 0; display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
+.size-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.size-card-top h3 { font-size: 1.25rem; margin: 0; }
+.size-dims { color: var(--muted); font-size: 0.85rem; margin: 0.15rem 0 0; }
+.size-price-block { text-align: right; flex-shrink: 0; }
+.size-price { font-family: "DM Serif Display", serif; font-size: 1.4rem; color: var(--orange); margin: 0; white-space: nowrap; }
+.size-price small { font-family: "DM Sans", sans-serif; font-size: 0.8rem; color: var(--muted); }
+.size-per { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 0.15rem 0 0; }
+.size-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; }
+.size-tag { background: #F8F7F5; border: 1px solid #E8E6E3; border-radius: 999px; padding: 0.35rem 0.75rem; font-size: 0.85rem; font-weight: 600; color: var(--navy); }
+.size-desc { font-size: 0.95rem; color: var(--muted); line-height: 1.5; margin: 0; }
+.size-actions { display: flex; gap: 0.5rem; margin-top: auto; padding-top: 0.5rem; }
+.size-actions .btn { flex: 1; text-align: center; padding: 0.75rem 0.5rem; }
+/* The book-page picker reuses the size cards for selection, so its buttons
+   stay hidden — clicking a card selects the size instead. */
+.picker .size-actions { display: none; }
 
 /* Steps */
 .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; counter-reset: step; }
@@ -269,12 +280,14 @@ tr:last-child td { border-bottom: none; }
 @media (max-width: 900px) {
   .hero-grid { grid-template-columns: 1fr; }
   .grid-3, .steps, .gallery-grid { grid-template-columns: 1fr 1fr; }
+  .size-grid { grid-template-columns: 1fr 1fr; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
   .header-actions { display: none; }
 }
 @media (max-width: 600px) {
   h1 { font-size: 2.1rem; }
   .grid-3, .grid-2, .steps, .gallery-grid, .feature-grid, .form-row { grid-template-columns: 1fr; }
+  .size-grid { grid-template-columns: 1fr; }
   .footer-grid { grid-template-columns: 1fr; }
   table { display: block; overflow-x: auto; }
   .topbar-note { display: none; }

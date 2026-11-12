@@ -71,6 +71,38 @@ SIZE_IMAGES = {
     180: "180sqft-corridor-2048.jpg",
 }
 
+# Dimensions, capacity and "what fits" per size. Our units are almost the
+# same size as Urban Box's equivalents, so these follow their published
+# figures for the matching sizes (user-confirmed 2026-11-12). Correct any
+# line that does not match our actual units.
+SIZE_DETAILS = {
+    50: {
+        "dims": "10 × 5 ft",
+        "cbm": "12–13 CBM",
+        "desc": "20–30 boxes, suitcases, sports equipment and bicycles — like a large walk-in closet. Ideal for a studio.",
+    },
+    80: {
+        "dims": "10 × 8 ft",
+        "cbm": "18–20 CBM",
+        "desc": "50–60 boxes, sofas, coffee tables and dining sets. Great for 1–2 bedroom contents.",
+    },
+    100: {
+        "dims": "10 × 10 ft",
+        "cbm": "20–24 CBM",
+        "desc": "Full 1-bedroom contents, 50+ archive boxes, office furniture and appliances.",
+    },
+    150: {
+        "dims": "10 × 15 ft",
+        "cbm": "40–42 CBM",
+        "desc": "2-bedroom apartment or villa contents, large furniture sets, bulk inventory and commercial stock.",
+    },
+    180: {
+        "dims": "10 × 18 ft",
+        "cbm": "48–50 CBM",
+        "desc": "A complete 2-bedroom villa — white goods, wardrobes and a full dining set — or pallets of retail stock.",
+    },
+}
+
 app = FastAPI(
     title="Globe Link International Website",
     docs_url=None,
@@ -157,25 +189,33 @@ def fmt_price(value: float) -> str:
     return f"AED {value:,.2f}"
 
 
-def size_cards_html(sizes: list[dict]) -> str:
+def size_cards_html(sizes: list[dict], wa_link: str) -> str:
     cards = []
     for s in sizes:
-        img = SIZE_IMAGES.get(int(s["sqft"]), "facility-interior-2048.jpg")
-        note = (
-            "Corridor view — our 180 sqft units are the largest we offer."
-            if int(s["sqft"]) == 180
-            else f"Our real {int(s['sqft'])} sqft unit at our Al Sajaa facility."
-        )
+        sqft = int(s["sqft"])
+        img = SIZE_IMAGES.get(sqft, "facility-interior-2048.jpg")
+        d = SIZE_DETAILS.get(sqft, {"dims": "", "cbm": "", "desc": ""})
+        dims_line = f"{d['dims']} · {d['cbm']}" if d["dims"] else ""
         cards.append(
-            f"""<article class="size-card" data-sqft="{int(s['sqft'])}">
-              <img src="/static/images/{img}" alt="{int(s['sqft'])} sqft storage unit" loading="lazy" decoding="async">
+            f"""<article class="size-card" data-sqft="{sqft}">
+              <img src="/static/images/{img}" alt="{sqft} sqft storage unit" loading="lazy" decoding="async">
               <div class="size-card-body">
-                <h3>{int(s['sqft'])} sq ft</h3>
-                <p class="size-label">{html.escape(s.get('label') or '')}</p>
-                <p class="size-note">{note}</p>
-                <p class="size-price">from {fmt_price(float(s['price_monthly']))}<span>/month</span></p>
-                <p class="size-vat">incl. VAT</p>
-                <a class="btn btn-primary" href="/book?size={int(s['sqft'])}">Book this size</a>
+                <div class="size-card-top">
+                  <div>
+                    <h3>{sqft} sq ft</h3>
+                    <p class="size-dims">{dims_line}</p>
+                  </div>
+                  <div class="size-price-block">
+                    <p class="size-price"><small>from</small> {fmt_price(float(s['price_monthly']))}</p>
+                    <p class="size-per">Per month · incl. VAT</p>
+                  </div>
+                </div>
+                <p class="size-tags"><span class="size-tag">{html.escape(s.get('label') or '')}</span></p>
+                <p class="size-desc">{d['desc']}</p>
+                <div class="size-actions">
+                  <a class="btn btn-primary" href="/book?size={sqft}">Book this size</a>
+                  <a class="btn btn-outline" href="{html.escape(wa_link, quote=True)}">WhatsApp</a>
+                </div>
               </div>
             </article>"""
         )
@@ -277,7 +317,7 @@ def render(name: str) -> HTMLResponse:
         "{{ADDRESS}}": html.escape(biz["address"]),
         "{{PRICE_PER_SQFT}}": html.escape(biz["price_per_sqft"]),
         "{{STORAGE_LOCATION}}": html.escape(biz["storage_location"]),
-        "{{SIZE_CARDS}}": size_cards_html(sizes),
+        "{{SIZE_CARDS}}": size_cards_html(sizes, biz["whatsapp_link"]),
         "{{SIZE_ROWS}}": size_rows_html(sizes),
         "{{FAQ_ITEMS}}": faq_html(faq),
         "{{SIZE_OPTIONS}}": size_options_html(sizes),
@@ -416,8 +456,19 @@ def health():
 
 @app.get("/api/content")
 def content():
+    sizes = []
+    for s in db.get_sizes():
+        d = SIZE_DETAILS.get(int(s["sqft"]), {})
+        sizes.append(
+            {
+                **s,
+                "dims": d.get("dims", ""),
+                "cbm": d.get("cbm", ""),
+                "desc": d.get("desc", ""),
+            }
+        )
     return {
-        "sizes": db.get_sizes(),
+        "sizes": sizes,
         "faq": db.get_faq(),
         "business": db.get_business(),
         "referral_sources": REFERRAL_SOURCES,
