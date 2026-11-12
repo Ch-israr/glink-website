@@ -323,7 +323,7 @@ body.admin-body {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
   text-align: center;
 }
-.admin-login-card .logo-img { height: 56px; width: auto; margin-bottom: 1rem; }
+.admin-login-card .logo-img { height: 56px; width: auto; display: block; margin: 0 auto 1rem; }
 .admin-login-card h1 { font-size: 1.8rem; margin: 0 0 0.25rem; color: var(--admin-navy); }
 .admin-login-card .form-note { margin-bottom: 1.5rem; }
 .admin-login-card form { text-align: left; }
