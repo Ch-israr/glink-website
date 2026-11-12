@@ -290,6 +290,34 @@ body.admin-body {
 .lead-row .lead-msg { margin: 0.5rem 0 0; }
 .lead-row .lead-foot { display: flex; justify-content: flex-end; margin-top: 0.6rem; }
 
+/* ---- Users ---- */
+.user-row {
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 0.75rem;
+  background: #fbfbfa;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.user-row .user-id strong { color: var(--admin-navy); font-size: 1.02rem; }
+.user-row .user-id .meta { color: var(--admin-muted); font-size: 0.85rem; margin-left: 0.5rem; }
+.role-badge {
+  display: inline-block;
+  background: #eef2ff;
+  border: 1px solid #dbe2f7;
+  color: var(--admin-navy);
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.user-row.inactive { opacity: 0.6; }
+.user-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
 /* ---- Messages ---- */
 #admin-msg p { margin: 0 0 1.25rem; }
 .success-msg, .error {

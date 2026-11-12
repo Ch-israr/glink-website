@@ -22,6 +22,7 @@
       <button class="tab-btn" data-tab="faq" type="button">FAQ</button>
       <button class="tab-btn" data-tab="business" type="button">Business Info</button>
       <button class="tab-btn" data-tab="leads" type="button">Enquiries <span class="count-badge" id="leads-count">0</span></button>
+      <button class="tab-btn" data-tab="users" type="button">Users</button>
     </nav>
 
     <div class="spacer"></div>
@@ -88,6 +89,23 @@
         <h2>Enquiries</h2>
         <p class="form-note">Quote and contact form submissions, newest first. These are also sent to WhatsApp by the visitor.</p>
         <div id="leads-list"><p class="form-note">Loading…</p></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-users">
+      <div class="admin-panel-card">
+        <h2>Users</h2>
+        <p class="form-note">Employee accounts that sign in on the admin login page. Sales and Accounts can see enquiries and prices but change nothing. Viewers see prices and business info, but not enquiries. Only the main admin can add or remove users.</p>
+        <div id="users-list"><p class="form-note">Loading…</p></div>
+        <h3 style="margin-top:1.5rem">Add a user</h3>
+        <div class="business-grid">
+          <div class="form-field"><label>Username</label><input type="text" id="new-username" placeholder="e.g. sales-ahmed" autocomplete="off"></div>
+          <div class="form-field"><label>Password (min 8 characters)</label><input type="password" id="new-password" autocomplete="new-password"></div>
+          <div class="form-field"><label>Role</label><select id="new-role"><option value="sales">Sales</option><option value="accounts">Accounts</option><option value="viewer">Viewer</option><option value="admin">Admin</option></select></div>
+        </div>
+        <div class="admin-actions">
+          <button class="btn btn-primary" id="add-user" type="button">+ Add user</button>
+        </div>
       </div>
     </section>
   </main>

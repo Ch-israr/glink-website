@@ -112,10 +112,26 @@ def init_db() -> None:
             );
             CREATE TABLE IF NOT EXISTS sessions (
                 sid TEXT PRIMARY KEY,
+                username TEXT NOT NULL DEFAULT 'admin',
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL,
+                salt TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'viewer',
+                active INTEGER NOT NULL DEFAULT 1,
                 created_at TEXT NOT NULL DEFAULT (datetime('now'))
             );
             """
         )
+        # Sessions created before the username column existed have no owner
+        # recorded; treat them as the built-in admin's.
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(sessions)").fetchall()]
+        if "username" not in cols:
+            conn.execute("ALTER TABLE sessions ADD COLUMN username TEXT NOT NULL DEFAULT 'admin'")
+            conn.commit()
         # Seed sizes once.
         if conn.execute("SELECT COUNT(*) FROM sizes").fetchone()[0] == 0:
             conn.executemany(
@@ -287,11 +303,11 @@ def prune_sessions() -> None:
         conn.close()
 
 
-def add_session(sid: str) -> None:
+def add_session(sid: str, username: str = "admin") -> None:
     prune_sessions()
     conn = connect()
     try:
-        conn.execute("INSERT INTO sessions (sid) VALUES (?)", (sid,))
+        conn.execute("INSERT INTO sessions (sid, username) VALUES (?, ?)", (sid, username))
         conn.commit()
     finally:
         conn.close()
@@ -311,5 +327,99 @@ def delete_session(sid: str) -> None:
     try:
         conn.execute("DELETE FROM sessions WHERE sid = ?", (sid,))
         conn.commit()
+    finally:
+        conn.close()
+
+
+def delete_sessions_for_user(username: str) -> None:
+    """Revoke every session belonging to one user (password reset, removal)."""
+    conn = connect()
+    try:
+        conn.execute("DELETE FROM sessions WHERE username = ?", (username,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Admin users (employee accounts with roles)
+# ---------------------------------------------------------------------------
+
+def create_user(username: str, password_hash: str, salt: str, role: str) -> int:
+    conn = connect()
+    try:
+        cur = conn.execute(
+            "INSERT INTO users (username, password_hash, salt, role) VALUES (?, ?, ?, ?)",
+            (username, password_hash, salt, role),
+        )
+        conn.commit()
+        return cur.lastrowid
+    finally:
+        conn.close()
+
+
+def get_user(username: str) -> dict | None:
+    conn = connect()
+    try:
+        row = conn.execute(
+            "SELECT * FROM users WHERE username = ?", (username,)
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def get_user_by_id(user_id: int) -> dict | None:
+    conn = connect()
+    try:
+        row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def list_users() -> list[dict]:
+    """All employee accounts, newest first. Never includes password material."""
+    conn = connect()
+    try:
+        rows = conn.execute(
+            "SELECT id, username, role, active, created_at FROM users ORDER BY id DESC"
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def set_user_password(user_id: int, password_hash: str, salt: str) -> bool:
+    conn = connect()
+    try:
+        cur = conn.execute(
+            "UPDATE users SET password_hash = ?, salt = ? WHERE id = ?",
+            (password_hash, salt, user_id),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def set_user_active(user_id: int, active: bool) -> bool:
+    conn = connect()
+    try:
+        cur = conn.execute(
+            "UPDATE users SET active = ? WHERE id = ?", (1 if active else 0, user_id)
+        )
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def delete_user(user_id: int) -> bool:
+    conn = connect()
+    try:
+        cur = conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        conn.commit()
+        return cur.rowcount > 0
     finally:
         conn.close()

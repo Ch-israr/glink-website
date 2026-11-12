@@ -505,14 +505,14 @@ def create_lead(request: Request, lead: LeadIn):
 # Admin panel
 # ---------------------------------------------------------------------------
 
-def _is_admin(request: Request) -> bool:
+def _session_user(request: Request) -> dict | None:
     # A locked-out address cannot use an existing session either: the
     # lockout covers the whole admin panel, not just the login form.
     # Otherwise a browser that signed in earlier would sail straight
     # past a lockout on refresh.
     if ratelimit.login_locked(_client_ip(request)) > 0:
-        return False
-    return auth.verify_session_token(request.cookies.get(auth.SESSION_COOKIE))
+        return None
+    return auth.get_session_user(request.cookies.get(auth.SESSION_COOKIE))
 
 
 def _lockout_message(remaining: float) -> str:
@@ -520,10 +520,17 @@ def _lockout_message(remaining: float) -> str:
     return f"Too many failed sign-in attempts. Try again in about {minutes} minute(s)."
 
 
-def _admin_required(request: Request):
-    if not _is_admin(request):
-        return JSONResponse({"ok": False, "error": "Not signed in."}, status_code=401)
-    return None
+def _require_roles(request: Request, *roles: str):
+    """Returns (denied_response_or_None, user_dict_or_None)."""
+    user = _session_user(request)
+    if user is None:
+        return JSONResponse({"ok": False, "error": "Not signed in."}, status_code=401), None
+    if user["role"] not in roles:
+        return (
+            JSONResponse({"ok": False, "error": "Not allowed for your role."}, status_code=403),
+            None,
+        )
+    return None, user
 
 
 def _render_admin_login(error: str = "") -> HTMLResponse:
@@ -534,7 +541,7 @@ def _render_admin_login(error: str = "") -> HTMLResponse:
 
 @app.get("/admin", response_class=HTMLResponse)
 def admin_home(request: Request):
-    if not _is_admin(request):
+    if not _session_user(request):
         remaining = ratelimit.login_locked(_client_ip(request))
         if remaining > 0:
             return _render_admin_login(_lockout_message(remaining))
@@ -555,11 +562,12 @@ def admin_login(request: Request, username: str = Form(...), password: str = For
             "Admin login is not configured on this server: the ADMIN_PASSWORD "
             "environment variable is not set. Set it and restart the service."
         )
-    if not auth.check_login(username, password):
+    user = auth.check_login(username, password)
+    if user is None:
         ratelimit.record_login_failure(ip)
         return _render_admin_login("Invalid username or password.")
     ratelimit.reset_login_failures(ip)
-    token = auth.create_session_token()
+    token = auth.create_session_token(user)
     response = RedirectResponse("/admin", status_code=303)
     response.set_cookie(
         auth.SESSION_COOKIE,
@@ -585,7 +593,7 @@ def admin_logout(request: Request):
 
 @app.get("/admin/api/leads")
 def admin_list_leads(request: Request):
-    denied = _admin_required(request)
+    denied, _user = _require_roles(request, *auth.ROLES_THAT_VIEW_LEADS)
     if denied is not None:
         return denied
     return {"ok": True, "leads": db.get_leads()}
@@ -593,7 +601,7 @@ def admin_list_leads(request: Request):
 
 @app.delete("/admin/api/leads/{lead_id}")
 def admin_delete_lead(request: Request, lead_id: int):
-    denied = _admin_required(request)
+    denied, _user = _require_roles(request, "admin")
     if denied is not None:
         return denied
     if not db.delete_lead(lead_id):
@@ -607,7 +615,7 @@ class SizesIn(BaseModel):
 
 @app.put("/admin/api/sizes")
 def admin_save_sizes(request: Request, payload: SizesIn):
-    denied = _admin_required(request)
+    denied, _user = _require_roles(request, "admin")
     if denied is not None:
         return denied
     try:
@@ -638,7 +646,7 @@ class FaqIn(BaseModel):
 
 @app.put("/admin/api/faq")
 def admin_save_faq(request: Request, payload: FaqIn):
-    denied = _admin_required(request)
+    denied, _user = _require_roles(request, "admin")
     if denied is not None:
         return denied
     try:
@@ -662,8 +670,146 @@ class BusinessIn(BaseModel):
 
 @app.put("/admin/api/business")
 def admin_save_business(request: Request, payload: BusinessIn):
-    denied = _admin_required(request)
+    denied, _user = _require_roles(request, "admin")
     if denied is not None:
         return denied
     db.update_business(payload.business)
     return {"ok": True, "business": db.get_business()}
+
+
+# ---------------------------------------------------------------------------
+# Admin users (employee accounts with roles) — admin role only
+# ---------------------------------------------------------------------------
+
+USERNAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{2,31}$")
+
+
+def _users_list() -> list[dict]:
+    users = [
+        {
+            "id": 0,
+            "username": auth.ADMIN_USERNAME,
+            "role": "admin",
+            "active": 1,
+            "created_at": "",
+            "builtin": True,
+        }
+    ]
+    users.extend({**u, "builtin": False} for u in db.list_users())
+    return users
+
+
+@app.get("/admin/api/me")
+def admin_me(request: Request):
+    denied, user = _require_roles(request, *auth.ROLES)
+    if denied is not None:
+        return denied
+    return {"ok": True, "user": user}
+
+
+@app.get("/admin/api/users")
+def admin_list_users(request: Request):
+    denied, _user = _require_roles(request, "admin")
+    if denied is not None:
+        return denied
+    return {"ok": True, "users": _users_list()}
+
+
+class UserIn(BaseModel):
+    username: str = Field(min_length=3, max_length=32)
+    password: str = Field(min_length=8, max_length=200)
+    role: str
+
+
+@app.post("/admin/api/users")
+def admin_create_user(request: Request, payload: UserIn):
+    denied, _user = _require_roles(request, "admin")
+    if denied is not None:
+        return denied
+    username = payload.username.strip().lower()
+    if not USERNAME_RE.match(username):
+        return JSONResponse(
+            {"ok": False, "error": "Username must be 3–32 characters: lowercase letters, numbers, _ or -."},
+            status_code=400,
+        )
+    if username == auth.ADMIN_USERNAME:
+        return JSONResponse(
+            {"ok": False, "error": "That username is reserved for the main admin account."},
+            status_code=400,
+        )
+    if payload.role not in auth.ROLES:
+        return JSONResponse(
+            {"ok": False, "error": "Role must be admin, sales, accounts or viewer."},
+            status_code=400,
+        )
+    if db.get_user(username) is not None:
+        return JSONResponse(
+            {"ok": False, "error": "That username is already taken."}, status_code=400
+        )
+    salt, password_hash = auth.hash_password(payload.password)
+    db.create_user(username, password_hash, salt, payload.role)
+    return {"ok": True, "users": _users_list()}
+
+
+@app.delete("/admin/api/users/{user_id}")
+def admin_delete_user(request: Request, user_id: int):
+    denied, _user = _require_roles(request, "admin")
+    if denied is not None:
+        return denied
+    if user_id == 0:
+        return JSONResponse(
+            {"ok": False, "error": "The main admin account cannot be removed."},
+            status_code=400,
+        )
+    user = db.get_user_by_id(user_id)
+    if user is None:
+        return JSONResponse({"ok": False, "error": "User not found."}, status_code=404)
+    auth.revoke_user_sessions(user["username"])
+    db.delete_user(user_id)
+    return {"ok": True, "users": _users_list()}
+
+
+class PasswordIn(BaseModel):
+    password: str = Field(min_length=8, max_length=200)
+
+
+@app.post("/admin/api/users/{user_id}/reset-password")
+def admin_reset_user_password(request: Request, user_id: int, payload: PasswordIn):
+    denied, _user = _require_roles(request, "admin")
+    if denied is not None:
+        return denied
+    if user_id == 0:
+        return JSONResponse(
+            {"ok": False, "error": "The main admin password lives in Render settings, not here."},
+            status_code=400,
+        )
+    user = db.get_user_by_id(user_id)
+    if user is None:
+        return JSONResponse({"ok": False, "error": "User not found."}, status_code=404)
+    salt, password_hash = auth.hash_password(payload.password)
+    db.set_user_password(user_id, password_hash, salt)
+    auth.revoke_user_sessions(user["username"])
+    return {"ok": True}
+
+
+class ActiveIn(BaseModel):
+    active: bool
+
+
+@app.post("/admin/api/users/{user_id}/active")
+def admin_set_user_active(request: Request, user_id: int, payload: ActiveIn):
+    denied, _user = _require_roles(request, "admin")
+    if denied is not None:
+        return denied
+    if user_id == 0:
+        return JSONResponse(
+            {"ok": False, "error": "The main admin account cannot be deactivated."},
+            status_code=400,
+        )
+    user = db.get_user_by_id(user_id)
+    if user is None:
+        return JSONResponse({"ok": False, "error": "User not found."}, status_code=404)
+    db.set_user_active(user_id, payload.active)
+    if not payload.active:
+        auth.revoke_user_sessions(user["username"])
+    return {"ok": True, "users": _users_list()}
