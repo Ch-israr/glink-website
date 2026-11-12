@@ -8,10 +8,19 @@ SQLite; the frontend also fetches /api/content on load.
 """
 import html
 import os
+import re
 from pathlib import Path
 
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.exceptions import StarletteHTTPException
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    JSONResponse,
+    PlainTextResponse,
+    RedirectResponse,
+    Response,
+)
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -19,6 +28,28 @@ from . import auth, db, ratelimit
 
 BASE = Path(__file__).resolve().parent.parent
 TEMPLATES = BASE / "templates"
+
+# Canonical public URL of the site (sitemap, canonical tags, social
+# previews). Override with the SITE_URL env var if a custom domain is
+# ever added — the code reads this one constant everywhere.
+SITE_URL = os.environ.get("SITE_URL", "https://glink-website-o23l.onrender.com").rstrip("/")
+
+# Template file -> public path, for canonical URLs and the sitemap.
+PAGE_PATHS = {
+    "home.html": "/",
+    "personal.html": "/personal",
+    "business.html": "/business",
+    "size-guide.html": "/size-guide",
+    "logistics.html": "/logistics",
+    "about.html": "/about",
+    "gallery.html": "/gallery",
+    "book.html": "/book",
+    "contact.html": "/contact",
+    "privacy.html": "/privacy",
+}
+
+# Real facility photo used for social link previews.
+OG_IMAGE = "/static/images/facility-exterior-1.jpg"
 
 REFERRAL_SOURCES = [
     "Google Ads",
@@ -153,6 +184,45 @@ def size_options_html(sizes: list[dict]) -> str:
     return "\n".join(options)
 
 
+def _inject_head_extras(page: str, name: str) -> str:
+    """Favicon, canonical and social-preview tags, injected before </head>.
+
+    og:title / og:description reuse the page's own <title> and meta
+    description, so they never drift from what the page actually says.
+    The 404 page gets only the favicon links (no canonical/OG).
+    """
+    extras = [
+        '<link rel="icon" type="image/png" href="/static/images/favicon.png">',
+        '<link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">',
+    ]
+    path = PAGE_PATHS.get(name)
+    if path is not None:
+        title_m = re.search(r"<title>(.*?)</title>", page, re.S)
+        desc_m = re.search(r'<meta name="description" content="([^"]*)"', page)
+        url = SITE_URL + path
+        extras.append(f'<link rel="canonical" href="{url}">')
+        extras.append('<meta property="og:type" content="website">')
+        extras.append('<meta property="og:site_name" content="Glink Int\'L Storage and movers">')
+        if title_m:
+            extras.append(
+                '<meta property="og:title" content="'
+                + html.escape(title_m.group(1).strip(), quote=True)
+                + '">'
+            )
+        if desc_m:
+            extras.append(
+                '<meta property="og:description" content="'
+                + html.escape(desc_m.group(1), quote=True)
+                + '">'
+            )
+        extras.append(f'<meta property="og:url" content="{url}">')
+        extras.append(f'<meta property="og:image" content="{SITE_URL}{OG_IMAGE}">')
+        extras.append('<meta name="twitter:card" content="summary_large_image">')
+    if "</head>" in page:
+        return page.replace("</head>", "\n".join(extras) + "\n</head>", 1)
+    return page
+
+
 def render(name: str) -> HTMLResponse:
     """Render a page template with live content from the database."""
     sizes = db.get_sizes()
@@ -175,7 +245,71 @@ def render(name: str) -> HTMLResponse:
     }
     for token, value in tokens.items():
         page = page.replace(token, value)
+    page = _inject_head_extras(page, name)
     return HTMLResponse(page)
+
+
+# ---------------------------------------------------------------------------
+# SEO: sitemap, robots, favicon, branded 404
+# ---------------------------------------------------------------------------
+
+SITEMAP_PAGES = [
+    ("/", "weekly", "1.0"),
+    ("/personal", "monthly", "0.8"),
+    ("/business", "monthly", "0.8"),
+    ("/size-guide", "monthly", "0.9"),
+    ("/logistics", "monthly", "0.8"),
+    ("/about", "monthly", "0.6"),
+    ("/gallery", "monthly", "0.6"),
+    ("/book", "monthly", "0.9"),
+    ("/contact", "monthly", "0.7"),
+    ("/privacy", "yearly", "0.3"),
+]
+
+
+@app.get("/sitemap.xml", response_class=Response)
+def sitemap():
+    urls = "\n".join(
+        f"  <url><loc>{SITE_URL}{path}</loc>"
+        f"<changefreq>{freq}</changefreq><priority>{prio}</priority></url>"
+        for path, freq, prio in SITEMAP_PAGES
+    )
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"{urls}\n</urlset>"
+    )
+    return Response(content=xml, media_type="application/xml")
+
+
+@app.get("/robots.txt", response_class=PlainTextResponse)
+def robots():
+    return (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /admin\n"
+        "Disallow: /api/\n"
+        "\n"
+        f"Sitemap: {SITE_URL}/sitemap.xml\n"
+    )
+
+
+@app.get("/favicon.ico")
+def favicon():
+    # Browsers request /favicon.ico on every visit; serve the real icon
+    # instead of a 404.
+    return FileResponse(
+        BASE / "static" / "images" / "favicon.png", media_type="image/png"
+    )
+
+
+@app.exception_handler(404)
+async def not_found(request: Request, exc: StarletteHTTPException):
+    if request.url.path.startswith("/api/"):
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
+    response = render("404.html")
+    response.status_code = 404
+    return response
 
 
 # ---------------------------------------------------------------------------
